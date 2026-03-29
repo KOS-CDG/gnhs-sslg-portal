@@ -1,0 +1,14 @@
+{
+  "name": "gnhs-sslg-portal",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["frontend", "backend", "functions"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
+    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
+    "lint": "npm run lint --workspace=frontend && npm run lint --workspace=backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

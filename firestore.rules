@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isStudent() {
+      return isAuthenticated() && getUserRole() in ['student', 'officer', 'super_admin'];
+    }
+
+    function isOfficer() {
+      return isAuthenticated() && getUserRole() in ['officer', 'super_admin'];
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super_admin';
+    }
+
+    // ── users ───────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if isOwner(uid) || isOfficer();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── announcements ───────────────────────────────────────────────────────
+    match /announcements/{id} {
+      allow read:   if true;            // public
+      allow create: if isOfficer();
+      allow update: if isOfficer();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── events ──────────────────────────────────────────────────────────────
+    match /events/{id} {
+      allow read:   if true;
+      allow write:  if isOfficer();
+    }
+
+    // ── registrations ───────────────────────────────────────────────────────
+    match /registrations/{id} {
+      allow read:   if isOfficer();
+      allow create: if true;            // anyone can register
+      allow update: if isOfficer();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── requests ────────────────────────────────────────────────────────────
+    match /requests/{id} {
+      allow read:   if isOfficer() || isOwner(resource.data.submittedBy);
+      allow create: if true;            // anonymous submissions allowed
+      allow update: if isOfficer();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── organizations ───────────────────────────────────────────────────────
+    match /organizations/{id} {
+      allow read:   if true;
+      allow write:  if isOfficer();
+    }
+
+    // ── documents ───────────────────────────────────────────────────────────
+    match /documents/{id} {
+      allow read:   if resource.data.isPublic == true || isOfficer();
+      allow write:  if isOfficer();
+    }
+
+    // ── evaluations ─────────────────────────────────────────────────────────
+    match /evaluations/{id} {
+      allow read:   if isOfficer();
+      allow create: if isStudent();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── scs_members ─────────────────────────────────────────────────────────
+    match /scs_members/{id} {
+      allow read:   if isOfficer() || isOwner(resource.data.uid);
+      allow create: if isStudent();
+      allow update: if isOfficer() || isOwner(resource.data.uid);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── officers ────────────────────────────────────────────────────────────
+    match /officers/{id} {
+      allow read:   if true;
+      allow write:  if isOfficer();
+    }
+
+    // ── history_milestones ──────────────────────────────────────────────────
+    match /history_milestones/{id} {
+      allow read:   if true;
+      allow write:  if isOfficer();
+    }
+
+    // ── past_administrations ────────────────────────────────────────────────
+    match /past_administrations/{id} {
+      allow read:   if true;
+      allow write:  if isSuperAdmin();
+    }
+  }
+}

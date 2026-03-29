@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── Helper: check Firestore role ───────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // All uploads: authenticated users only, max 20 MB
+    match /{allPaths=**} {
+      allow read:  if true;
+      allow write: if isAuthenticated()
+                   && request.resource.size < 20 * 1024 * 1024;
+    }
+
+    // Officer uploads (documents, events, orgs)
+    match /documents/{file} {
+      allow write: if isAuthenticated();
+    }
+
+    match /officers/{file} {
+      allow write: if isAuthenticated();
+    }
+
+    match /organizations/{file} {
+      allow write: if isAuthenticated();
+    }
+
+    match /events/{file} {
+      allow write: if isAuthenticated();
+    }
+  }
+}
